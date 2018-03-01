@@ -122,6 +122,11 @@ namespace rockzombot2
                         }
                     }
 
+                    if (message.Equals("!elo"))
+                    {
+                        irc.SendPublicChatMessage("Silver V");
+                    }
+
                     if (message.StartsWith("!say"))
                     {
                         Zombie zombie = zombies.Find(x => x.getUsername() == userName);
@@ -158,10 +163,11 @@ namespace rockzombot2
                     newZombie.addBrainz(1);
                     zombies.Add(newZombie);
 
-                    irc.SendPublicChatMessage("Welcome to the channel, "+newZombie.getUsername()+
-                        "! You have been granted 1 free brain!\r["+newZombie.getUsername()+
-                        " has "+newZombie.getBrainz()+" brain"+
-                        (newZombie.getBrainz() > 1 ? "z" : "")+"!]");
+                    irc.SendPublicChatMessage("Welcome, " + newZombie.getUsername() + "!");
+                    //irc.SendPublicChatMessage("Welcome to the channel, "+newZombie.getUsername()+
+                    //    "! You have been granted 1 free brain!\r["+newZombie.getUsername()+
+                    //    " has "+newZombie.getBrainz()+" brain"+
+                    //    (newZombie.getBrainz() > 1 ? "z" : "")+"!]");
                 }
             }
         }
