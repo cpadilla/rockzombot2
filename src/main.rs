@@ -3,7 +3,9 @@ use twitch_irc::login::StaticLoginCredentials;
 use twitch_irc::TwitchIRCClient;
 use twitch_irc::{ClientConfig, SecureTCPTransport};
 use std::time::Duration;
-use tokio::{task, time};
+use tokio::time;
+use tokio::sync::mpsc;
+use futures::future;
 
 #[tokio::main]
 pub async fn main() {
@@ -15,73 +17,8 @@ pub async fn main() {
     let config = ClientConfig::new_simple(
         StaticLoginCredentials::new(login_name, Some(oauth_token))
     );
-    let (mut incoming_messages, client) =
+    let (incoming_messages, client) =
         TwitchIRCClient::<SecureTCPTransport, StaticLoginCredentials>::new(config);
-
-    let x = client.clone();
-
-    // first thing you should do: start consuming incoming messages,
-    // otherwise they will back up.
-    let join_handle = tokio::spawn(async move {
-        while let Some(message) = incoming_messages.recv().await {
-            //println!("Received message: {:?}", message);
-
-            match message {
-                ServerMessage::Privmsg(msg) => {
-                    println!("(#{}) {}: {}", msg.channel_login, msg.sender.name, msg.message_text);
-
-                    // Discord
-                    if msg.message_text.to_lowercase().contains("!discord") {
-                        x.say("rockzombie2".to_owned(), "Join the Space Pirates Discord! https://discord.gg/ErM35TPK2D".to_owned()).await.unwrap();
-                    }
-
-                    // Operating System
-                    if msg.message_text.to_lowercase().contains("!os") {
-                        x.say("rockzombie2".to_owned(), "I run Windows as my host OS (for gaming) and screencapture my !laptop which dual-boots FreeBSD and Windows 11.".to_owned()).await.unwrap();
-                    }
-
-                    // Laptop
-                    if msg.message_text.to_lowercase().contains("!laptop") {
-                        x.say("rockzombie2".to_owned(), "I dual boot FreeBSD and Windows 11 on a ThinkPad P15v Gen 3 AMD (15\") laptop.".to_owned()).await.unwrap();
-                    }
-
-                    // Window Manager
-                    if msg.message_text.to_lowercase().contains("!wm") {
-                        x.say("rockzombie2".to_owned(), "I use the suckless window manager, DWM.".to_owned()).await.unwrap();
-                    }
-
-                    // dotfiles
-                    if msg.message_text.to_lowercase().contains("!dotfiles") {
-                        x.say("rockzombie2".to_owned(), "You can find my dotfiles on !github: https://github.com/cpadilla/dotfiles".to_owned()).await.unwrap();
-                    }
-
-                    // Github
-                    if msg.message_text.to_lowercase().contains("!github") {
-                        x.say("rockzombie2".to_owned(), "https://github.com/cpadilla".to_owned()).await.unwrap();
-                    }
-
-                    // socials
-                    if msg.message_text.to_lowercase().contains("!socials") ||
-                        msg.message_text.to_lowercase().contains("!tiktok") ||
-                        msg.message_text.to_lowercase().contains("!youtube") ||
-                        msg.message_text.to_lowercase().contains("!twitter") {
-                        x.say("rockzombie2".to_owned(), "Follow me on social media and checkout my !blog! https://twitter.com/rockzombie2 https://www.tiktok.com/@rockzombie2 https://youtube.com/rockzombie2".to_owned()).await.unwrap();
-                    }
-
-                    // blog
-                    if msg.message_text.to_lowercase().contains("!website") || msg.message_text.to_lowercase().contains("!blog") {
-                        x.say("rockzombie2".to_owned(), "Reflections - https://christofer.rocks/".to_owned()).await.unwrap();
-                    }
-
-                },
-                ServerMessage::Whisper(msg) => {
-                    println!("(w) {}: {}", msg.sender.name, msg.message_text);
-                },
-                _ => {}
-            }
-
-        }
-    });
 
     // join a channel
     // This function only returns an error if the passed channel login name is malformed,
@@ -89,22 +26,86 @@ pub async fn main() {
     // error with `unwrap`.
     client.join("rockzombie2".to_owned()).unwrap();
 
-    // keep the tokio executor alive.
-    // If you return instead of waiting the background task will exit.
-    join_handle.await.unwrap();
+    let x = client.clone();
 
-    let y = client.clone();
+    let (_x, _y) = future::join(read_messages(incoming_messages, client), reminder(x)).await;
+}
 
-    // Periodically remind chat to join socials
-    let reminders = task::spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(900));
-        loop {
-            // Wait 15 minutes
-            interval.tick().await;
-            y.say("rockzombie2".to_owned(), "Join the Space Pirates Discord! https://discord.gg/ErM35TPK2D".to_owned()).await.unwrap();
+async fn read_messages(mut incoming_messages: mpsc::UnboundedReceiver<ServerMessage>, client: TwitchIRCClient::<SecureTCPTransport, StaticLoginCredentials>) {
+    // first thing you should do: start consuming incoming messages,
+    // otherwise they will back up.
+    while let Some(message) = incoming_messages.recv().await {
+        //println!("Received message: {:?}", message);
+
+        match message {
+            ServerMessage::Privmsg(msg) => {
+                println!("(#{}) {}: {}", msg.channel_login, msg.sender.name, msg.message_text);
+
+                // Discord
+                if msg.message_text.to_lowercase().contains("!discord") {
+                    client.say("rockzombie2".to_owned(), "Join the Space Pirates Discord! https://discord.gg/ErM35TPK2D".to_owned()).await.unwrap();
+                }
+
+                // Operating System
+                if msg.message_text.to_lowercase().contains("!os") {
+                    client.say("rockzombie2".to_owned(), "I run Windows as my host OS (for gaming) and screencapture my !laptop which dual-boots FreeBSD and Windows 11.".to_owned()).await.unwrap();
+                }
+
+                // Laptop
+                if msg.message_text.to_lowercase().contains("!laptop") {
+                    client.say("rockzombie2".to_owned(), "I dual boot FreeBSD and Windows 11 on a ThinkPad P15v Gen 3 AMD (15\") laptop.".to_owned()).await.unwrap();
+                }
+
+                // Window Manager
+                if msg.message_text.to_lowercase().contains("!wm") {
+                    client.say("rockzombie2".to_owned(), "I use the suckless window manager, DWM.".to_owned()).await.unwrap();
+                }
+
+                // dotfiles
+                if msg.message_text.to_lowercase().contains("!dotfiles") {
+                    client.say("rockzombie2".to_owned(), "You can find my dotfiles on !github: https://github.com/cpadilla/dotfiles".to_owned()).await.unwrap();
+                }
+
+                // Github
+                if msg.message_text.to_lowercase().contains("!github") {
+                    client.say("rockzombie2".to_owned(), "https://github.com/cpadilla".to_owned()).await.unwrap();
+                }
+
+                // socials
+                if msg.message_text.to_lowercase().contains("!socials") ||
+                    msg.message_text.to_lowercase().contains("!tiktok") ||
+                    msg.message_text.to_lowercase().contains("!youtube") ||
+                    msg.message_text.to_lowercase().contains("!twitter") {
+                    client.say("rockzombie2".to_owned(), "Follow me on social media and checkout my !blog! https://twitter.com/rockzombie2 https://www.tiktok.com/@rockzombie2 https://youtube.com/rockzombie2".to_owned()).await.unwrap();
+                }
+
+                // blog
+                if msg.message_text.to_lowercase().contains("!website") || msg.message_text.to_lowercase().contains("!blog") {
+                    client.say("rockzombie2".to_owned(), "Reflections - https://christofer.rocks/".to_owned()).await.unwrap();
+                }
+
+            },
+            ServerMessage::Whisper(msg) => {
+                println!("(w) {}: {}", msg.sender.name, msg.message_text);
+            },
+            _ => {}
         }
-    });
 
-    // TODO: run these concurrently
-    reminders.await.unwrap();
+    }
+}
+
+async fn reminder(client: TwitchIRCClient::<SecureTCPTransport, StaticLoginCredentials>) {
+    let mut socials = false;
+    let mut interval = time::interval(Duration::from_secs(900));
+    loop {
+        // Wait 15 minutes
+        interval.tick().await;
+        if socials {
+            client.say("rockzombie2".to_owned(), "Follow me on social media and checkout my !blog! https://twitter.com/rockzombie2 https://www.tiktok.com/@rockzombie2 https://youtube.com/rockzombie2".to_owned()).await.unwrap();
+            socials = !socials;
+        } else {
+            client.say("rockzombie2".to_owned(), "Join the Space Pirates Discord! https://discord.gg/ErM35TPK2D".to_owned()).await.unwrap();
+            socials = !socials;
+        }
+    }
 }
