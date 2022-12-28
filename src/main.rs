@@ -84,6 +84,11 @@ async fn read_messages(mut incoming_messages: mpsc::UnboundedReceiver<ServerMess
                     client.say("rockzombie2".to_owned(), "Reflections - https://christofer.rocks/".to_owned()).await.unwrap();
                 }
 
+                // commands
+                if msg.message_text.to_lowercase().contains("!commands") {
+                    client.say("rockzombie2".to_owned(), "See https://github.com/cpadilla/rockzombot2".to_owned()).await.unwrap();
+                }
+
             },
             ServerMessage::Whisper(msg) => {
                 println!("(w) {}: {}", msg.sender.name, msg.message_text);
