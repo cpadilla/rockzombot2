@@ -7,6 +7,8 @@ use tokio::time;
 use tokio::sync::mpsc;
 use futures::future;
 
+mod spotify;
+
 #[tokio::main]
 pub async fn main() {
     // default configuration is to join chat as anonymous.
@@ -25,6 +27,15 @@ pub async fn main() {
     // so in this simple case where the channel name is hardcoded we can ignore the potential
     // error with `unwrap`.
     client.join("rockzombie2".to_owned()).unwrap();
+
+    let song = spotify::get_current_song().await.unwrap();
+    if song.is_playing.is_some() && song.is_playing.unwrap() {
+        let item = song.item.unwrap();
+        let name = item.name;
+        let ref artists = &item.album.artists[0];
+        let artist = artists.name.as_str();
+        println!("Song: {} - {}", name, artist);
+    }
 
     let x = client.clone();
 
