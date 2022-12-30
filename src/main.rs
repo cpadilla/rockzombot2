@@ -28,15 +28,6 @@ pub async fn main() {
     // error with `unwrap`.
     client.join("rockzombie2".to_owned()).unwrap();
 
-    let song = spotify::get_current_song().await.unwrap();
-    if song.is_playing.is_some() && song.is_playing.unwrap() {
-        let item = song.item.unwrap();
-        let name = item.name;
-        let ref artists = &item.album.artists[0];
-        let artist = artists.name.as_str();
-        println!("Song: {} - {}", name, artist);
-    }
-
     let x = client.clone();
 
     let (_x, _y) = future::join(read_messages(incoming_messages, client), reminder(x)).await;
@@ -94,6 +85,21 @@ async fn read_messages(mut incoming_messages: mpsc::UnboundedReceiver<ServerMess
                 if msg.message_text.to_lowercase().contains("!website") || msg.message_text.to_lowercase().contains("!blog") {
                     client.say("rockzombie2".to_owned(), "Reflections - https://christofer.rocks/".to_owned()).await.unwrap();
                 }
+
+                // song
+                if msg.message_text.to_lowercase().contains("!song") {
+                    let song = spotify::get_current_song().await.unwrap();
+                    if song.is_playing.is_some() && song.is_playing.unwrap() {
+                        let item = song.item.unwrap();
+                        let name = item.name;
+                        let ref artists = &item.album.artists[0];
+                        let artist = artists.name.as_str();
+                        println!("Song: {} - {}", name, artist);
+                        let currently_playing = format!("🎵 {} - {}", name, artist);
+                        client.say("rockzombie2".to_owned(), currently_playing).await.unwrap();
+                    }
+                }
+
 
                 // commands
                 if msg.message_text.to_lowercase().contains("!commands") {

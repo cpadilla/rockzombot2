@@ -143,7 +143,6 @@ pub async fn get_current_song() -> Option<Song> {
     match response.status() {
         reqwest::StatusCode::OK => {
             // on success, parse our JSON to an APIResponse
-            // println!("Response from spotify: {}", response.text().await.ok().unwrap());
             match response.json::<Song>().await {
                 Ok(parsed) => {
                     println!("Success! {:?}", parsed);
@@ -153,8 +152,7 @@ pub async fn get_current_song() -> Option<Song> {
                     println!("Hm, the response didn't match the shape we expected.");
                     None::<Song>
                 }
-            };
-            //let result: Result<song::Song, serde_json::Error> = serde_json::from_str(response.text().await.ok().unwrap().as_str());
+            }
         }
         reqwest::StatusCode::UNAUTHORIZED => {
             println!("Need to grab a new token");
@@ -176,8 +174,7 @@ pub async fn get_current_song() -> Option<Song> {
             match response.status() {
                 reqwest::StatusCode::OK => {
                     // on success, parse our JSON to an APIResponse
-                    // println!("Response from spotify: {}", response.text().await.ok().unwrap());
-                    match response.json::<Song>().await {
+                    let song = match response.json::<Song>().await {
                         Ok(parsed) => {
                             println!("Success! {:?}", parsed);
                             Some(parsed)
@@ -187,19 +184,21 @@ pub async fn get_current_song() -> Option<Song> {
                             None::<Song>
                         }
                     };
+                    song
                 }
                 reqwest::StatusCode::UNAUTHORIZED => {
-                    panic!("Uh oh! Failed to authorize!");
+                    //Uh oh! Failed to authorize!
+                    None::<Song>
                 }
-                other => {
-                    panic!("Uh oh! Something unexpected happened: {:?}", other);
+                _ => {
+                    //Uh oh! Something unexpected happened
+                    None::<Song>
                 }
             }
         }
         other => {
             panic!("Uh oh! Something unexpected happened: {:?}", other);
         }
-    };
-    None::<Song>
+    }
 }
 
