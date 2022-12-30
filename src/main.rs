@@ -98,6 +98,8 @@ async fn read_messages(mut incoming_messages: mpsc::UnboundedReceiver<ServerMess
                                 println!("Song: {} - {}", name, artist);
                                 let currently_playing = format!("🎵 {} - {}", name, artist);
                                 client.say("rockzombie2".to_owned(), currently_playing).await.unwrap();
+                            } else {
+                                client.say("rockzombie2".to_owned(), "Nothing is playing rn!".to_owned()).await.unwrap();
                             }
                         }
                         None => {
