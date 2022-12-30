@@ -88,16 +88,23 @@ async fn read_messages(mut incoming_messages: mpsc::UnboundedReceiver<ServerMess
 
                 // song
                 if msg.message_text.to_lowercase().contains("!song") {
-                    let song = spotify::get_current_song().await.unwrap();
-                    if song.is_playing.is_some() && song.is_playing.unwrap() {
-                        let item = song.item.unwrap();
-                        let name = item.name;
-                        let ref artists = &item.album.artists[0];
-                        let artist = artists.name.as_str();
-                        println!("Song: {} - {}", name, artist);
-                        let currently_playing = format!("🎵 {} - {}", name, artist);
-                        client.say("rockzombie2".to_owned(), currently_playing).await.unwrap();
-                    }
+                    match spotify::get_current_song().await {
+                        Some(song) => {
+                            if song.is_playing.is_some() && song.is_playing.unwrap() {
+                                let item = song.item.unwrap();
+                                let name = item.name;
+                                let ref artists = &item.album.artists[0];
+                                let artist = artists.name.as_str();
+                                println!("Song: {} - {}", name, artist);
+                                let currently_playing = format!("🎵 {} - {}", name, artist);
+                                client.say("rockzombie2".to_owned(), currently_playing).await.unwrap();
+                            }
+                        }
+                        None => {
+                            println!("get_current_song() returned None.");
+                            client.say("rockzombie2".to_owned(), "Nothing is playing rn!".to_owned()).await.unwrap();
+                        }
+                    };
                 }
 
 
